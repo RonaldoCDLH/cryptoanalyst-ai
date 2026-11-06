@@ -67,7 +67,12 @@ if "watchlist" not in st.session_state:
     st.session_state.watchlist = ["BTC", "ETH", "SOL"]
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = [
-        {"role": "assistant", "content": "Bienvenido a **CryptoAnalyst AI**. Este es un **prototipo con datos simulados**. Pregúntame por Bitcoin, compara dos criptomonedas o consulta el módulo de noticias."}
+        {"role": "assistant", "content": (
+            "Bienvenido a **CryptoAnalyst AI**. Puedes consultar cotizaciones públicas de CoinGecko; "
+            "el chat utiliza reglas y todavía no es un modelo de IA." if MARKET_LIVE else
+            "Bienvenido a **CryptoAnalyst AI**. Esta sesión muestra datos simulados porque "
+            "la API de mercado no está disponible. El chat utiliza reglas, no un modelo de IA."
+        )}
     ]
 
 
