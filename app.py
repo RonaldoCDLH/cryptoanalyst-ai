@@ -139,7 +139,7 @@ with st.sidebar:
         f'<div class="sidebar-info"><div class="dot"></div><div><strong>{sidebar_mode}</strong>'
         f'<br><span>{sidebar_note}</span></div></div>', unsafe_allow_html=True
     )
-    st.markdown('<div class="sidebar-footer">v0.1 · Prototipo académico<br>Construido con Python + Streamlit</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-footer">v0.2 · Datos públicos y demo<br>Construido con Python + Streamlit</div>', unsafe_allow_html=True)
 
 
 st.markdown(
@@ -169,7 +169,7 @@ if "Panel principal" in section:
 
     left, right = st.columns([1.84, 1], gap="large")
     with left:
-        st.markdown('<div class="panel-heading"><div><span class="eyebrow">GRÁFICA EXPLORATORIA</span><h3>Evolución del precio</h3></div><span class="panel-badge">{"HISTÓRICO COINGECKO" if MARKET_LIVE else "SERIE SINTÉTICA"}</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="panel-heading"><div><span class="eyebrow">GRÁFICA EXPLORATORIA</span><h3>Evolución del precio</h3></div>' + f'<span class="panel-badge">{"HISTÓRICO COINGECKO" if MARKET_LIVE else "SERIE SINTÉTICA"}</span></div>', unsafe_allow_html=True)
         c1, c2 = st.columns([1, 2])
         with c1:
             st.markdown(f'<div class="selected-coin">{safe(COINS[selected]["name"])} <span>{safe(selected)}</span></div>', unsafe_allow_html=True)
