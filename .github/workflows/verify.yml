@@ -1,0 +1,20 @@
+name: Validación CryptoAnalyst AI Pro
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verificar sintaxis de todo el proyecto
+        run: python -m compileall -q app.py agent365.py data.py services
+      - name: Instalar dependencias
+        run: python -m pip install -r requirements.txt
+      - name: Verificar agente y herramientas
+        run: |
+          python -c "from agent365 import crypto_list_tool, crypto_data_tool, crypto_news_tool, graph, configured; print('Agent imported; 3 tools defined')"
