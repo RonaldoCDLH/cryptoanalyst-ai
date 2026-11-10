@@ -1,38 +1,48 @@
-# CryptoAnalyst AI Pro — edición pública Streamlit
+# CryptoAnalyst AI Pro · Registro obligatorio + diseño Aurora
 
-Aplicación web académica basada en el proyecto de agente cripto de 365 Data Science. Se ejecuta en Streamlit Cloud: https://cryptoanalyst-ronaldo2026.streamlit.app/
+URL de la aplicación: https://cryptoanalyst-ronaldo2026.streamlit.app/
 
-## Funciones actuales
+## Acceso de usuarios
 
-- Panel y explorador de mercado CoinGecko; cuando no hay acceso a cotizaciones se etiqueta el modo de datos demostrativos.
-- Análisis técnico: RSI 14, medias móviles 7 y 21, volatilidad histórica calculada sobre datos observados.
-- Cartera de inversión **virtual por sesión**, sin órdenes reales, sin persistencia entre sesiones.
-- Noticias RSS de fuentes atribuidas (no se presentan ejemplos de titulares ficticios como si fueran noticias).
-- Agente IA **real** con LangGraph `StateGraph`, `ToolNode`, herramientas `crypto_list_tool`, `crypto_data_tool`, `crypto_news_tool` y `ChatOpenAI`. Checkpointer en memoria **por sesión del proceso**, no base de datos de usuarios.
-- Página de planes informativa Free/Pro. **No acepta pagos ni activa suscripciones** en Streamlit Cloud.
+La aplicación **no muestra el panel ni realiza consultas al mercado sin una sesión iniciada**. Incluye formulario de registro (nombre, email y contraseña), inicio de sesión y botón de cierre de sesión. Las contraseñas se verifican usando PBKDF2-HMAC-SHA256 y una sal aleatoria cuando se usa la base SQLite local; no se guardan en texto plano.
 
-## Habilitar el agente
+La nueva interfaz incorpora una pantalla de acceso de dos columnas, identidad visual violeta/índigo/cian, paneles modernos, tarjetas responsive y navegación mejorada.
 
-En Settings → Secrets de la aplicación Streamlit Cloud configura, sin publicarlas en este repositorio:
+**Muy importante:** hay dos modos de autenticación:
+
+- **Sin configuración adicional:** SQLite local para **demostraciones**. El usuario puede crear una cuenta y entrar, pero en Streamlit Community Cloud el disco es efímero: **las cuentas pueden desaparecer después de reinicios o despliegues. No utilizarlo para clientes reales**.
+- **Cuentas persistentes recomendadas:** configura [Supabase Auth](https://supabase.com/docs/guides/auth) en los **Secrets de Streamlit Cloud** para registro e inicio de sesión respaldados por un servicio de autenticación real, con políticas de correo y recuperación administradas por el proveedor. Las credenciales se envían directamente al servicio Auth por HTTPS. Habilita la confirmación por correo y configura el dominio permitido y las restricciones de alta en Supabase.
+
+Agrega en Streamlit Cloud → App settings → Secrets (NUNCA en este repositorio):
 
 ```toml
-OPENAI_API_KEY = "tu_clave_privada_de_OpenAI"
+SUPABASE_URL = "https://TU-PROYECTO.supabase.co"
+SUPABASE_ANON_KEY = "TU_CLAVE_PUBLICA_O_ANON"
+OPENAI_API_KEY = "TU_CLAVE_OPENAI"
 COINGECKO_DEMO_API_KEY = ""
 FREECRYPTO_TOKEN = ""
 NEWSAPI_KEY = ""
 NEWSAPI_COMMERCIAL_LICENSE_ACKNOWLEDGED = "false"
 ```
 
-Solo `OPENAI_API_KEY` habilita el agente generativo. La clave de CoinGecko y FreeCryptoAPI son opcionales; NEWSAPI_KEY requiere permiso/licencia de uso comercial para el entorno público y un valor explícito `true` en `NEWSAPI_COMMERCIAL_LICENSE_ACKNOWLEDGED`. Nunca compartas claves en capturas o conversaciones.
+Para una prueba del login sin OpenAI deja la clave OpenAI sin configurar: mercado, análisis y cartera se mantienen accesibles después del registro; el agente indica claramente que está desactivado. **No pegues contraseñas, claves o tokens en GitHub ni los compartas por chat**.
 
-El chat no simula OpenAI si falta la clave. El histórico de chat del navegador se conserva en la sesión Streamlit y las herramientas usan un checkpointer de proceso; para una plataforma multiusuario de producción hay que incorporar almacenamiento persistente y aislamiento autenticado.
+## Alcance del proyecto 365 Data Science
 
-## Ejecutar pruebas de integración y sintaxis
+- Mercado de criptomonedas con fuente CoinGecko o modo demo identificado.
+- Gráficos interactivos y comparación de activos.
+- Indicadores RSI, SMA7/SMA21 y volatilidad sobre datos observados.
+- Cartera virtual educativa por sesión, no conectada a intercambios.
+- Noticias RSS atribuidas; sin titulares de ejemplo presentados como actuales.
+- Agente OpenAI/LangGraph con tres herramientas (lista, datos y noticias) y memoria temporal por hilo; requiere clave y créditos válidos.
+- Propuesta de planes Free y Pro. **Monetización todavía no activada en esta URL**.
 
-El workflow `.github/workflows/verify.yml` verifica imports del agente, sintaxis e instalación de dependencias en GitHub Actions. Los proveedores externos no se prueban sin claves.
+## Pruebas
 
-## Monetización real: pendiente
+GitHub Actions instala dependencias, comprueba sintaxis, importa el agente y ejecuta pruebas del registro, hash de contraseñas, duplicados y bloqueo del panel para usuarios anónimos.
 
-La vista Free/Pro es una propuesta de producto. No hay login persistente ni pasarela de pagos conectada al servicio Streamlit. El paquete local con FastAPI (en la conversación de desarrollo) contiene un prototipo de autenticación y endpoints Stripe/Wompi, pero para activarlos en una aplicación pública hacen falta hosting de backend con HTTPS, variables secretas, webhook verificado, licencias, privacidad, tests de pago y controles de producción.
+## Pendientes antes de vender suscripciones
 
-No se ofrecen recomendaciones personalizadas de inversión. Los datos públicos dependen de terceros y pueden tener retrasos.
+Cuentas persistentes y verificación de correo con Supabase, términos y política de datos, recuperación de cuenta, cuotas y controles contra abuso, API y memoria persistente por usuario, verificación de pagos y webhooks, licencias comerciales de noticias/datos y pruebas de infraestructura. El formulario Free/Pro es informativo y **no recibe pagos** todavía.
+
+Esta aplicación no ofrece recomendaciones personales de inversión ni garantiza cotizaciones en tiempo real.
