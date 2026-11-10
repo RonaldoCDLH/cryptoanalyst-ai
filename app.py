@@ -52,25 +52,25 @@ def require_account() -> None:
     left, right = st.columns([1.09, 0.91], gap="large", vertical_alignment="center")
     with left:
         st.markdown("""
-        <div class="auth-brand"><div class="auth-brand-symbol">◈</div>
+        <div class="auth-brand notranslate" translate="no"><div class="auth-brand-symbol notranslate" translate="no">◈</div>
           <div>CRYPTO<span>ANALYST</span><small>PRO INTELLIGENCE</small></div>
         </div>
-        <div class="auth-eyebrow"><span class="auth-live-dot"></span> PLATAFORMA DE INTELIGENCIA CRIPTO</div>
-        <h1 class="auth-headline">Invierte en<br><em>conocimiento.</em><br>No en suposiciones.</h1>
-        <p class="auth-description">Una terminal inteligente para investigar activos digitales,
+        <div class="auth-eyebrow notranslate" translate="no"><span class="auth-live-dot notranslate" translate="no"></span> PLATAFORMA DE INTELIGENCIA CRIPTO</div>
+        <h1 class="auth-headline notranslate" translate="no">Invierte en<br><em>conocimiento.</em><br>No en suposiciones.</h1>
+        <p class="auth-description notranslate" translate="no">Una terminal inteligente para investigar activos digitales,
         comparar el mercado y explorar tendencias con datos trazables y herramientas de IA.</p>
-        <div class="auth-feature-grid">
+        <div class="auth-feature-grid notranslate" translate="no">
             <div><strong>01</strong><span>Mercado y gráficos</span></div>
             <div><strong>02</strong><span>Indicadores técnicos</span></div>
             <div><strong>03</strong><span>Agente de análisis IA</span></div>
             <div><strong>04</strong><span>Cartera virtual</span></div>
         </div>
-        <div class="auth-trust">◉ ACCESO PRIVADO <span>·</span> ◇ DATOS IDENTIFICADOS <span>·</span> ↗ FREE / PRO</div>
+        <div class="auth-trust notranslate" translate="no">◉ ACCESO PRIVADO <span>·</span> ◇ DATOS IDENTIFICADOS <span>·</span> ↗ FREE / PRO</div>
         """, unsafe_allow_html=True)
 
     with right:
         st.markdown("""
-        <div class="auth-form-heading"><span>ACCESO A LA PLATAFORMA</span>
+        <div class="auth-form-heading notranslate" translate="no"><span>ACCESO A LA PLATAFORMA</span>
         <h2>Tu terminal, tu espacio.</h2>
         <p>Ingresa con tu cuenta o crea una nueva en menos de un minuto.</p></div>
         """, unsafe_allow_html=True)
@@ -127,7 +127,7 @@ def require_account() -> None:
             st.caption("Las cuentas se gestionan mediante Supabase Auth.")
         else:
             st.caption("Versión de prueba: las cuentas locales pueden borrarse al reiniciar el servidor. Usa una contraseña exclusiva para esta aplicación.")
-        st.markdown('<div class="auth-legal">CryptoAnalyst AI Pro · Acceso privado · Plataforma de investigación, no asesoría financiera.</div>',
+        st.markdown('<div class="auth-legal notranslate" translate="no">CryptoAnalyst AI Pro · Acceso privado · Plataforma de investigación, no asesoría financiera.</div>',
                     unsafe_allow_html=True)
 
     st.stop()
@@ -180,14 +180,16 @@ def historical_series(symbol: str, days: int):
 if "watchlist" not in st.session_state:
     st.session_state.watchlist = ["BTC", "ETH", "SOL"]
 if "chat_history" not in st.session_state:
-    st.session_state.chat_history = [
-        {"role": "assistant", "content": (
-            "Bienvenido a **CryptoAnalyst AI**. Puedes consultar cotizaciones públicas de CoinGecko; "
-            "el chat utiliza reglas y todavía no es un modelo de IA." if MARKET_LIVE else
-            "Bienvenido a **CryptoAnalyst AI**. Esta sesión muestra datos simulados porque "
-            "la API de mercado no está disponible. El chat utiliza reglas, no un modelo de IA."
-        )}
-    ]
+    st.session_state.chat_history = []
+# Retirar mensajes obsoletos de versiones anteriores sin borrar conversaciones reales.
+if (
+    st.session_state.chat_history
+    and st.session_state.chat_history[0].get("role") == "assistant"
+    and "el chat utiliza reglas" in str(
+        st.session_state.chat_history[0].get("content", "")
+    ).lower()
+):
+    st.session_state.chat_history = st.session_state.chat_history[1:]
 
 
 if "agent_thread_id" not in st.session_state:
@@ -223,18 +225,18 @@ def safe(s: str) -> str:
 
 def heading(eyebrow: str, title: str, subtitle: str = "") -> None:
     st.markdown(
-        f'<div class="section-heading"><div class="eyebrow">{safe(eyebrow)}</div>'
+        f'<div class="section-heading notranslate" translate="no"><div class="eyebrow notranslate" translate="no">{safe(eyebrow)}</div>'
         f'<h2>{safe(title)}</h2><p>{safe(subtitle)}</p></div>', unsafe_allow_html=True
     )
 
 
 def metric_card(label: str, value: str, delta: str, positive: bool = True, symbol: str = "") -> str:
     klass = "up" if positive else "down"
-    tag = f'<span class="token-tag">{safe(symbol)}</span>' if symbol else ""
+    tag = f'<span class="token-tag notranslate" translate="no">{safe(symbol)}</span>' if symbol else ""
     return (
-        f'<div class="metric-card"><div class="metric-top"><span>{safe(label)}</span>{tag}</div>'
-        f'<div class="metric-value">{safe(value)}</div>'
-        f'<div class="metric-bottom"><span class="{klass}">{safe(delta)}</span>'
+        f'<div class="metric-card notranslate" translate="no"><div class="metric-top notranslate" translate="no"><span>{safe(label)}</span>{tag}</div>'
+        f'<div class="metric-value notranslate" translate="no">{safe(value)}</div>'
+        f'<div class="metric-bottom notranslate" translate="no"><span class="{klass} notranslate" translate="no">{safe(delta)}</span>'
         f'<span> · {"CoinGecko" if MARKET_LIVE else "ilustrativo"}</span></div></div>'
     )
 
@@ -265,48 +267,55 @@ def chart_for(symbol: str, days: int, height: int = 365) -> go.Figure:
 
 
 with st.sidebar:
-    st.markdown('<div class="logo"><span class="logo-symbol">◈</span><div>CRYPTO<span>ANALYST</span><small>INTELLIGENCE TERMINAL</small></div></div>', unsafe_allow_html=True)
-    st.markdown('<div class="sidebar-caption">ESPACIO DE TRABAJO</div>', unsafe_allow_html=True)
+    st.markdown('<div class="logo notranslate" translate="no"><span class="logo-symbol notranslate" translate="no">◈</span><div>CRYPTO<span>ANALYST</span><small>INTELLIGENCE TERMINAL</small></div></div>', unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-caption notranslate" translate="no">ESPACIO DE TRABAJO</div>', unsafe_allow_html=True)
     section = st.radio(
         "Navegación",
         ["◫  Panel principal", "◈  Explorar mercado", "⌁  Análisis técnico", "▧  Cartera virtual", "▤  Noticias", "✦  Asistente IA", "◆  Planes Free / Pro", "⌘  Arquitectura"],
         label_visibility="collapsed",
     )
-    st.markdown('<div class="sidebar-caption">CONFIGURACIÓN</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-caption notranslate" translate="no">CONFIGURACIÓN</div>', unsafe_allow_html=True)
     selected = st.selectbox("Criptomoneda principal", options=list(COINS), format_func=lambda s: f"{COINS[s]['name']} ({s})")
     sidebar_mode = "Datos públicos verificados" if MARKET_LIVE else "Modo demostración"
     sidebar_note = "CoinGecko · caché de 5 min" if MARKET_LIVE else "API no disponible · datos ficticios"
     st.markdown(
-        f'<div class="sidebar-info"><div class="dot"></div><div><strong>{sidebar_mode}</strong>'
+        f'<div class="sidebar-info notranslate" translate="no"><div class="dot notranslate" translate="no"></div><div><strong>{sidebar_mode}</strong>'
         f'<br><span>{sidebar_note}</span></div></div>', unsafe_allow_html=True
     )
     current_user = st.session_state["auth_user"]
     user_name = html.escape(str(current_user.get("name", "Usuario")))
     user_email = html.escape(str(current_user.get("email", "")))
     st.markdown(
-        f'<div class="account-card"><div class="account-avatar">◈</div>'
+        f'<div class="account-card notranslate" translate="no"><div class="account-avatar notranslate" translate="no">◈</div>'
         f'<div><strong>{user_name}</strong><small>{user_email}</small></div>'
-        f'<span class="account-tier">FREE</span></div>',
+        f'<span class="account-tier notranslate" translate="no">FREE</span></div>',
         unsafe_allow_html=True,
     )
     if st.button("Cerrar sesión", use_container_width=True, key="logout_button"):
         st.session_state.clear()
         st.rerun()
-    st.markdown('<div class="sidebar-footer">v0.4 · Acceso privado · LangGraph<br>Python · Streamlit · OpenAI</div>', unsafe_allow_html=True)
+    with st.expander("¿Error al cambiar de pantalla en Edge?"):
+        st.caption(
+            "La aplicación ya está en español. Si aparece NotFoundError o removeChild, "
+            "desactiva la traducción de este sitio en Microsoft Edge: "
+            "elige «Mostrar original» y «Nunca traducir este sitio». "
+            "Después actualiza la pestaña."
+        )
+    st.markdown('<div class="sidebar-footer notranslate" translate="no">v0.4 · Acceso privado · LangGraph<br>Python · Streamlit · OpenAI</div>', unsafe_allow_html=True)
 
 
 st.markdown(
-    '<div class="top-line"><span class="crumb">PRODUCTO / CRYPTOANALYST AI</span>'
-    f'<span class="demo-pill">● {"MERCADO REAL · COINGECKO" if MARKET_LIVE else "MODO DEMO · DATOS SIMULADOS"}</span></div>', unsafe_allow_html=True
+    '<div class="top-line notranslate" translate="no"><span class="crumb notranslate" translate="no">PRODUCTO / CRYPTOANALYST AI</span>'
+    f'<span class="demo-pill notranslate" translate="no">● {"MERCADO REAL · COINGECKO" if MARKET_LIVE else "MODO DEMO · DATOS SIMULADOS"}</span></div>', unsafe_allow_html=True
 )
 
 if "Panel principal" in section:
     st.markdown(
-        '<div class="hero"><div class="hero-badge">◈ INTELIGENCIA DE MERCADO</div>'
+        '<div class="hero notranslate" translate="no"><div class="hero-badge notranslate" translate="no">◈ INTELIGENCIA DE MERCADO</div>'
         '<h1>El mercado, con una <span>nueva perspectiva.</span></h1>'
         '<p>Explora activos digitales, visualiza tendencias y conversa con un asistente. '
         'Un espacio personal para explorar indicadores, interpretar tendencias y desarrollar estrategias de análisis.</p>'
-        '<div class="hero-footer"><span>● ACCESO PRIVADO</span><span>PYTHON · ANALÍTICA · AGENTES IA</span></div>'
+        '<div class="hero-footer notranslate" translate="no"><span>● ACCESO PRIVADO</span><span>PYTHON · ANALÍTICA · AGENTES IA</span></div>'
         '</div>', unsafe_allow_html=True
     )
     heading("01 / PANORAMA", "Vista general del mercado",
@@ -322,10 +331,10 @@ if "Panel principal" in section:
 
     left, right = st.columns([1.84, 1], gap="large")
     with left:
-        st.markdown('<div class="panel-heading"><div><span class="eyebrow">GRÁFICA EXPLORATORIA</span><h3>Evolución del precio</h3></div>' + f'<span class="panel-badge">{"HISTÓRICO COINGECKO" if MARKET_LIVE else "SERIE SINTÉTICA"}</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="panel-heading notranslate" translate="no"><div><span class="eyebrow notranslate" translate="no">GRÁFICA EXPLORATORIA</span><h3>Evolución del precio</h3></div>' + f'<span class="panel-badge notranslate" translate="no">{"HISTÓRICO COINGECKO" if MARKET_LIVE else "SERIE SINTÉTICA"}</span></div>', unsafe_allow_html=True)
         c1, c2 = st.columns([1, 2])
         with c1:
-            st.markdown(f'<div class="selected-coin">{safe(COINS[selected]["name"])} <span>{safe(selected)}</span></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="selected-coin notranslate" translate="no">{safe(COINS[selected]["name"])} <span>{safe(selected)}</span></div>', unsafe_allow_html=True)
         with c2:
             period = st.radio("Intervalo", ["7D", "30D", "90D"], index=1, horizontal=True, label_visibility="collapsed")
         fig_price = chart_for(selected, int(period[:-1]))
@@ -336,13 +345,13 @@ if "Panel principal" in section:
         st.caption("Fuente: CoinGecko; consulta almacenada temporalmente." if MARKET_LIVE
                    else "Visualización sintética; los valores no describen el mercado actual.")
     with right:
-        st.markdown('<div class="panel-heading"><div><span class="eyebrow">SEGUIMIENTO</span><h3>Tu lista de observación</h3></div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="panel-heading notranslate" translate="no"><div><span class="eyebrow notranslate" translate="no">SEGUIMIENTO</span><h3>Tu lista de observación</h3></div></div>', unsafe_allow_html=True)
         for sym in st.session_state.watchlist:
             c = COINS[sym]
             st.markdown(
-                f'<div class="watch-row"><div class="coin-symbol" style="color:{c["color"]}">◈</div>'
-                f'<div class="watch-name"><b>{safe(c["name"])}</b><small>{safe(sym)}</small></div>'
-                f'<div class="watch-price"><strong>${c["price"]:,.2f}</strong><small class="{"up" if c["change"] >= 0 else "down"}">{c["change"]:+.2f}%</small></div></div>',
+                f'<div class="watch-row notranslate" translate="no"><div class="coin-symbol notranslate" translate="no" style="color:{c["color"]}">◈</div>'
+                f'<div class="watch-name notranslate" translate="no"><b>{safe(c["name"])}</b><small>{safe(sym)}</small></div>'
+                f'<div class="watch-price notranslate" translate="no"><strong>${c["price"]:,.2f}</strong><small class="{ notranslate" translate="no"up" if c["change"] >= 0 else "down"}">{c["change"]:+.2f}%</small></div></div>',
                 unsafe_allow_html=True,
             )
         options = [sym for sym in COINS if sym not in st.session_state.watchlist]
@@ -491,8 +500,10 @@ elif "Asistente IA" in section:
     heading("06 / AGENTE INTELIGENTE", "CryptoAnalyst — agente ReAct", "OpenAI + LangGraph + herramientas de mercado, noticias y memoria por conversación.")
     if ai_configured():
         st.success("Motor OpenAI configurado. El agente invocará herramientas cuando sean necesarias.")
+        if not st.session_state.chat_history:
+            st.markdown("**CryptoAnalyst AI Pro:** pregunta por Bitcoin, Ethereum o compara varios activos. Consultaré las fuentes disponibles y explicaré sus limitaciones.")
     else:
-        st.warning("OPENAI_API_KEY todavía no está configurada en Streamlit Secrets. El agente real está integrado, pero no se ejecutan respuestas inventadas.")
+        st.warning("El agente de IA está desactivado porque falta configurar OPENAI_API_KEY en Streamlit Secrets. No se generan respuestas ficticias.")
     for message in st.session_state.chat_history:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
@@ -530,7 +541,7 @@ elif "Planes Free / Pro" in section:
 elif "Arquitectura" in section:
     heading("05 / INGENIERÍA", "Arquitectura del producto", "Arquitectura por etapas: mercado real, análisis y agente inteligente.")
     st.markdown('''
-<div class="arch-row"><div class="arch-node">USUARIO <small>Streamlit · interfaz</small></div><div class="arch-arrow">→</div><div class="arch-node">AGENTE <small>Python · LangGraph</small></div><div class="arch-arrow">→</div><div class="arch-node">HERRAMIENTAS <small>APIs · análisis</small></div></div>
+<div class="arch-row notranslate" translate="no"><div class="arch-node notranslate" translate="no">USUARIO <small>Streamlit · interfaz</small></div><div class="arch-arrow notranslate" translate="no">→</div><div class="arch-node notranslate" translate="no">AGENTE <small>Python · LangGraph</small></div><div class="arch-arrow notranslate" translate="no">→</div><div class="arch-node notranslate" translate="no">HERRAMIENTAS <small>APIs · análisis</small></div></div>
 ''', unsafe_allow_html=True)
     st.markdown("""
 **Estado actual:** mercado CoinGecko, indicadores, cartera simulada, noticias RSS y agente ReAct con tres herramientas. El agente solo se habilita con credenciales privadas configuradas; en su ausencia no hay respuestas generativas.
@@ -542,4 +553,4 @@ elif "Arquitectura" in section:
 
 footer_note = ("COTIZACIONES: COINGECKO · AGENTE LANGGRAPH REQUIERE CLAVE OPENAI · MONETIZACIÓN PENDIENTE" if MARKET_LIVE
                else "MERCADO NO DISPONIBLE · PRECIOS SIMULADOS IDENTIFICADOS COMO DEMO · MONETIZACIÓN PENDIENTE")
-st.markdown(f'<div class="disclaimer">CRYPTOANALYST AI · PROTOTIPO ACADÉMICO · {footer_note}. NO CONSTITUYE ASESORÍA FINANCIERA.</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="disclaimer notranslate" translate="no">CRYPTOANALYST AI · PROTOTIPO ACADÉMICO · {footer_note}. NO CONSTITUYE ASESORÍA FINANCIERA.</div>', unsafe_allow_html=True)
