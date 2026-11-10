@@ -1,13 +1,15 @@
-"""CryptoAnalyst AI — prototipo visual en Streamlit (modo demostración)."""
+"""CryptoAnalyst AI Pro — plataforma privada de análisis cripto."""
 from __future__ import annotations
 
 from pathlib import Path
 from uuid import uuid4
+import time
 import html
 import os
 import requests
 import xml.etree.ElementTree as ET
 from agent365 import ask as ask_agent, configured as ai_configured
+from auth365 import AuthError, durable_accounts, provider, register, sign_in, verify_remote_session
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -24,6 +26,114 @@ st.set_page_config(
 
 CSS = (Path(__file__).parent / "styles.css").read_text(encoding="utf-8")
 st.markdown(f"<style>{CSS}</style>", unsafe_allow_html=True)
+
+
+def require_account() -> None:
+    """Todo el sitio, incluido el acceso a datos y herramientas, requiere sesión."""
+    user = st.session_state.get("auth_user")
+    if isinstance(user, dict) and user.get("id"):
+        if user.get("provider") == "supabase":
+            checked = st.session_state.get("auth_checked_at", 0.0)
+            if time.monotonic() - checked > 120:
+                if not verify_remote_session(user):
+                    st.session_state.pop("auth_user", None)
+                    st.session_state.pop("auth_checked_at", None)
+                    st.rerun()
+                st.session_state.auth_checked_at = time.monotonic()
+        return
+
+    st.markdown("""
+    <style>
+    [data-testid="stSidebar"], [data-testid="stSidebarCollapsedControl"]{display:none!important}
+    [data-testid="stMainBlockContainer"]{max-width:1190px!important;padding-top:3.1rem!important}
+    </style>
+    """, unsafe_allow_html=True)
+
+    left, right = st.columns([1.09, 0.91], gap="large", vertical_alignment="center")
+    with left:
+        st.markdown("""
+        <div class="auth-brand"><div class="auth-brand-symbol">◈</div>
+          <div>CRYPTO<span>ANALYST</span><small>PRO INTELLIGENCE</small></div>
+        </div>
+        <div class="auth-eyebrow"><span class="auth-live-dot"></span> PLATAFORMA DE INTELIGENCIA CRIPTO</div>
+        <h1 class="auth-headline">Invierte en<br><em>conocimiento.</em><br>No en suposiciones.</h1>
+        <p class="auth-description">Una terminal inteligente para investigar activos digitales,
+        comparar el mercado y explorar tendencias con datos trazables y herramientas de IA.</p>
+        <div class="auth-feature-grid">
+            <div><strong>01</strong><span>Mercado y gráficos</span></div>
+            <div><strong>02</strong><span>Indicadores técnicos</span></div>
+            <div><strong>03</strong><span>Agente de análisis IA</span></div>
+            <div><strong>04</strong><span>Cartera virtual</span></div>
+        </div>
+        <div class="auth-trust">◉ ACCESO PRIVADO <span>·</span> ◇ DATOS IDENTIFICADOS <span>·</span> ↗ FREE / PRO</div>
+        """, unsafe_allow_html=True)
+
+    with right:
+        st.markdown("""
+        <div class="auth-form-heading"><span>ACCESO A LA PLATAFORMA</span>
+        <h2>Tu terminal, tu espacio.</h2>
+        <p>Ingresa con tu cuenta o crea una nueva en menos de un minuto.</p></div>
+        """, unsafe_allow_html=True)
+        login_tab, register_tab = st.tabs(["Iniciar sesión", "Crear cuenta"])
+        with login_tab:
+            with st.form("login_form"):
+                email = st.text_input("Correo electrónico", placeholder="nombre@correo.com",
+                                      key="login_email", autocomplete="email")
+                password = st.text_input("Contraseña", type="password",
+                                         placeholder="Tu contraseña", key="login_password")
+                submit = st.form_submit_button("Entrar al panel  →", use_container_width=True, type="primary")
+            if submit:
+                try:
+                    st.session_state.auth_user = sign_in(email, password)
+                    st.session_state.auth_checked_at = time.monotonic()
+                    st.rerun()
+                except AuthError as exc:
+                    st.error(str(exc))
+        with register_tab:
+            with st.form("register_form"):
+                full_name = st.text_input("Nombre completo", placeholder="Tu nombre y apellido",
+                                          key="register_name")
+                new_email = st.text_input("Correo electrónico", placeholder="nombre@correo.com",
+                                           key="register_email", autocomplete="email")
+                new_password = st.text_input("Crear contraseña", type="password",
+                                              placeholder="Mínimo 12 caracteres, letras y números",
+                                              key="register_password")
+                confirm_password = st.text_input("Confirmar contraseña", type="password",
+                                                  placeholder="Repite tu contraseña",
+                                                  key="register_confirm")
+                submit_register = st.form_submit_button(
+                    "Crear cuenta gratuita  →", use_container_width=True, type="primary"
+                )
+            if submit_register:
+                if new_password != confirm_password:
+                    st.error("Las contraseñas no coinciden.")
+                else:
+                    try:
+                        account = register(full_name, new_email, new_password)
+                        if account.get("confirmation_required"):
+                            st.success("Registro recibido. Verifica tu correo y después inicia sesión.")
+                        else:
+                            st.session_state.auth_user = account
+                            st.session_state.auth_checked_at = time.monotonic()
+                            st.rerun()
+                    except AuthError as exc:
+                        st.error(str(exc))
+        try:
+            persistent = durable_accounts()
+        except AuthError as exc:
+            st.error(str(exc))
+            persistent = False
+        if persistent:
+            st.caption("Las cuentas se gestionan mediante Supabase Auth.")
+        else:
+            st.caption("Versión de prueba: las cuentas locales pueden borrarse al reiniciar el servidor. Usa una contraseña exclusiva para esta aplicación.")
+        st.markdown('<div class="auth-legal">CryptoAnalyst AI Pro · Acceso privado · Plataforma de investigación, no asesoría financiera.</div>',
+                    unsafe_allow_html=True)
+
+    st.stop()
+
+
+require_account()
 
 
 @st.cache_data(ttl=300, show_spinner=False)
@@ -170,7 +280,19 @@ with st.sidebar:
         f'<div class="sidebar-info"><div class="dot"></div><div><strong>{sidebar_mode}</strong>'
         f'<br><span>{sidebar_note}</span></div></div>', unsafe_allow_html=True
     )
-    st.markdown('<div class="sidebar-footer">v0.3 · Agente LangGraph integrado<br>Python · Streamlit · OpenAI</div>', unsafe_allow_html=True)
+    current_user = st.session_state["auth_user"]
+    user_name = html.escape(str(current_user.get("name", "Usuario")))
+    user_email = html.escape(str(current_user.get("email", "")))
+    st.markdown(
+        f'<div class="account-card"><div class="account-avatar">◈</div>'
+        f'<div><strong>{user_name}</strong><small>{user_email}</small></div>'
+        f'<span class="account-tier">FREE</span></div>',
+        unsafe_allow_html=True,
+    )
+    if st.button("Cerrar sesión", use_container_width=True, key="logout_button"):
+        st.session_state.clear()
+        st.rerun()
+    st.markdown('<div class="sidebar-footer">v0.4 · Acceso privado · LangGraph<br>Python · Streamlit · OpenAI</div>', unsafe_allow_html=True)
 
 
 st.markdown(
@@ -183,8 +305,8 @@ if "Panel principal" in section:
         '<div class="hero"><div class="hero-badge">◈ INTELIGENCIA DE MERCADO</div>'
         '<h1>El mercado, con una <span>nueva perspectiva.</span></h1>'
         '<p>Explora activos digitales, visualiza tendencias y conversa con un asistente. '
-        'Una experiencia diseñada para hacer comprensible la información compleja.</p>'
-        '<div class="hero-footer"><span>● DEMOSTRACIÓN INTERACTIVA</span><span>PYTHON · ANALÍTICA · AGENTES IA</span></div>'
+        'Un espacio personal para explorar indicadores, interpretar tendencias y desarrollar estrategias de análisis.</p>'
+        '<div class="hero-footer"><span>● ACCESO PRIVADO</span><span>PYTHON · ANALÍTICA · AGENTES IA</span></div>'
         '</div>', unsafe_allow_html=True
     )
     heading("01 / PANORAMA", "Vista general del mercado",
@@ -398,7 +520,7 @@ elif "Planes Free / Pro" in section:
     with left:
         st.subheader("Free")
         st.markdown("Panel de mercado, comparador, indicadores y cartera virtual de sesión.")
-        st.info("Acceso público al prototipo; sin pagos.")
+        st.info("Tu cuenta Free incluye las herramientas disponibles del prototipo.")
     with right:
         st.subheader("Pro · Próximamente")
         st.markdown("Agente ReAct, memoria persistente, cuentas individuales y mayores cuotas de consulta.")
