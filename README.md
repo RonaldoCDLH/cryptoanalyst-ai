@@ -1,52 +1,38 @@
-# CryptoAnalyst AI
+# CryptoAnalyst AI Pro — edición pública Streamlit
 
-Aplicación académica en Python y Streamlit para explorar el mercado de criptomonedas. Interfaz propia con CSS, gráficos Plotly, comparación de activos, lista de seguimiento, noticias de muestra y chat por reglas.
+Aplicación web académica basada en el proyecto de agente cripto de 365 Data Science. Se ejecuta en Streamlit Cloud: https://cryptoanalyst-ronaldo2026.streamlit.app/
 
-**Versión 0.2:** el panel ahora **intenta obtener precios y variaciones reales** de Bitcoin, Ethereum, Solana, BNB, XRP y Cardano mediante la API pública de CoinGecko. Las respuestas se almacenan en caché durante 5 minutos para reducir las solicitudes. Los históricos se almacenan durante 15 minutos. La aplicación identifica la fuente de datos usada.
+## Funciones actuales
 
-Cuando la API está temporalmente inaccesible o limitada, la interfaz permanece disponible en **modo DEMO** con datos **ficticios identificados claramente**. Nunca presenta los datos inventados como cotizaciones actuales. Si no hay datos históricos reales, se explica el problema en lugar de inventar una gráfica.
+- Panel y explorador de mercado CoinGecko; cuando no hay acceso a cotizaciones se etiqueta el modo de datos demostrativos.
+- Análisis técnico: RSI 14, medias móviles 7 y 21, volatilidad histórica calculada sobre datos observados.
+- Cartera de inversión **virtual por sesión**, sin órdenes reales, sin persistencia entre sesiones.
+- Noticias RSS de fuentes atribuidas (no se presentan ejemplos de titulares ficticios como si fueran noticias).
+- Agente IA **real** con LangGraph `StateGraph`, `ToolNode`, herramientas `crypto_list_tool`, `crypto_data_tool`, `crypto_news_tool` y `ChatOpenAI`. Checkpointer en memoria **por sesión del proceso**, no base de datos de usuarios.
+- Página de planes informativa Free/Pro. **No acepta pagos ni activa suscripciones** en Streamlit Cloud.
 
-**Aún no se ha integrado LangGraph, OpenAI, ni un servicio de noticias en producción.** El chat implementado funciona por reglas y las noticias actuales del panel son contenido ilustrativo, no titulares verificables. No debe presentarse como asesor de inversión ni como un agente IA de producción.
+## Habilitar el agente
 
-## App pública
-
-https://cryptoanalyst-ronaldo2026.streamlit.app/
-
-## Ejecución local en Windows
-
-```powershell
-py -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe -m streamlit run app.py
-```
-
-La aplicación funciona en modo demo sin credenciales. Para consultar la API pública de CoinGecko no es obligatorio registrarse, aunque las peticiones están limitadas y pueden ser bloqueadas por IP. Una clave Demo gratuita opcional puede mejorar la disponibilidad.
-
-Para usar una clave CoinGecko Demo opcional, añádela en el panel **Streamlit → Settings → Secrets** con este formato TOML:
+En Settings → Secrets de la aplicación Streamlit Cloud configura, sin publicarlas en este repositorio:
 
 ```toml
-COINGECKO_DEMO_API_KEY = "TU_CLAVE_PRIVADA_AQUI"
+OPENAI_API_KEY = "tu_clave_privada_de_OpenAI"
+COINGECKO_DEMO_API_KEY = ""
+FREECRYPTO_TOKEN = ""
+NEWSAPI_KEY = ""
+NEWSAPI_COMMERCIAL_LICENSE_ACKNOWLEDGED = "false"
 ```
 
-**Nunca publiques claves reales en GitHub, README, capturas ni conversaciones.** Para trabajar localmente también puedes configurar la variable de entorno `COINGECKO_DEMO_API_KEY`.
+Solo `OPENAI_API_KEY` habilita el agente generativo. La clave de CoinGecko y FreeCryptoAPI son opcionales; NEWSAPI_KEY requiere permiso/licencia de uso comercial para el entorno público y un valor explícito `true` en `NEWSAPI_COMMERCIAL_LICENSE_ACKNOWLEDGED`. Nunca compartas claves en capturas o conversaciones.
 
-## Estructura
+El chat no simula OpenAI si falta la clave. El histórico de chat del navegador se conserva en la sesión Streamlit y las herramientas usan un checkpointer de proceso; para una plataforma multiusuario de producción hay que incorporar almacenamiento persistente y aislamiento autenticado.
 
-- `app.py`: interfaz de Streamlit y lógica de navegación.
-- `styles.css`: apariencia de la plataforma.
-- `data.py`: datos sintéticos de respaldo y respuestas de demostración.
-- `services/market_data.py`: cotizaciones reales, históricos, validaciones, manejo de errores y respuestas por reglas basadas en datos.
-- `requirements.txt`: dependencias instaladas automáticamente por Streamlit.
-- `.gitignore`: protección de archivos de claves, entornos y caché.
+## Ejecutar pruebas de integración y sintaxis
 
-## Próximos pasos para igualar el proyecto de 365 Data Science
+El workflow `.github/workflows/verify.yml` verifica imports del agente, sintaxis e instalación de dependencias en GitHub Actions. Los proveedores externos no se prueban sin claves.
 
-1. Conectar la API FreeCryptoAPI mediante una clave privada y verificar su licencia de uso.
-2. Incorporar un servicio de noticias cuya licencia permita el uso en una app pública. El plan Developer gratuito de NewsAPI **no permite producción**.
-3. Implementar las tres herramientas de consulta, el agente ReAct en LangGraph y memoria por conversación.
-4. Activar un LLM opcional mediante claves seguras en Streamlit Secrets.
-5. Crear pruebas automáticas, monitoreo, límites de llamadas y documentación de sustentación.
+## Monetización real: pendiente
 
-CoinGecko: https://www.coingecko.com/en/api
+La vista Free/Pro es una propuesta de producto. No hay login persistente ni pasarela de pagos conectada al servicio Streamlit. El paquete local con FastAPI (en la conversación de desarrollo) contiene un prototipo de autenticación y endpoints Stripe/Wompi, pero para activarlos en una aplicación pública hacen falta hosting de backend con HTTPS, variables secretas, webhook verificado, licencias, privacidad, tests de pago y controles de producción.
 
-No se garantizan precios en tiempo real ni ganancias financieras. Consulta los datos directamente en la fuente antes de tomar decisiones.
+No se ofrecen recomendaciones personalizadas de inversión. Los datos públicos dependen de terceros y pueden tener retrasos.
