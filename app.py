@@ -348,10 +348,11 @@ if "Panel principal" in section:
         st.markdown('<div class="panel-heading notranslate" translate="no"><div><span class="eyebrow notranslate" translate="no">SEGUIMIENTO</span><h3>Tu lista de observación</h3></div></div>', unsafe_allow_html=True)
         for sym in st.session_state.watchlist:
             c = COINS[sym]
+            change_class = "up" if c["change"] >= 0 else "down"
             st.markdown(
                 f'<div class="watch-row notranslate" translate="no"><div class="coin-symbol notranslate" translate="no" style="color:{c["color"]}">◈</div>'
                 f'<div class="watch-name notranslate" translate="no"><b>{safe(c["name"])}</b><small>{safe(sym)}</small></div>'
-                f'<div class="watch-price notranslate" translate="no"><strong>${c["price"]:,.2f}</strong><small class="{\'up\' if c[\'change\'] >= 0 else \'down\'} notranslate" translate="no">{c["change"]:+.2f}%</small></div></div>',
+                f'<div class="watch-price notranslate" translate="no"><strong>${c["price"]:,.2f}</strong><small class="{change_class} notranslate" translate="no">{c["change"]:+.2f}%</small></div></div>',
                 unsafe_allow_html=True,
             )
         options = [sym for sym in COINS if sym not in st.session_state.watchlist]
