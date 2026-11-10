@@ -3,3 +3,8 @@
 __pycache__/
 *.pyc
 .streamlit/secrets.toml
+
+# Datos privados de usuarios (no publicar)
+data/
+*.sqlite3
+*.db
