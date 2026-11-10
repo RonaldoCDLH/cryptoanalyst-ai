@@ -2,8 +2,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from uuid import uuid4
 import html
 import os
+import requests
+import xml.etree.ElementTree as ET
+from agent365 import ask as ask_agent, configured as ai_configured
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -76,6 +80,33 @@ if "chat_history" not in st.session_state:
     ]
 
 
+if "agent_thread_id" not in st.session_state:
+    st.session_state.agent_thread_id = str(uuid4())
+if "wallet" not in st.session_state:
+    st.session_state.wallet = {"cash": 10000.0, "positions": {}, "trades": []}
+
+@st.cache_data(ttl=900, show_spinner=False)
+def public_headlines():
+    feeds = [
+        ("CoinDesk", "https://www.coindesk.com/arc/outboundfeeds/rss/"),
+        ("Cointelegraph", "https://cointelegraph.com/rss"),
+    ]
+    items = []
+    for provider, url in feeds:
+        try:
+            response = requests.get(url, timeout=8, headers={"User-Agent": "CryptoAnalyst-Education/1.0"})
+            response.raise_for_status()
+            root = ET.fromstring(response.content)
+            for item in root.findall(".//item")[:6]:
+                title = item.findtext("title", "").strip()
+                link = item.findtext("link", "").strip()
+                date = item.findtext("pubDate", "").strip()
+                if title and link.startswith("https://"):
+                    items.append({"title": title, "url": link, "date": date, "source": provider})
+        except (requests.RequestException, ET.ParseError):
+            continue
+    return items[:10]
+
 def safe(s: str) -> str:
     return html.escape(str(s))
 
@@ -128,7 +159,7 @@ with st.sidebar:
     st.markdown('<div class="sidebar-caption">ESPACIO DE TRABAJO</div>', unsafe_allow_html=True)
     section = st.radio(
         "Navegación",
-        ["◫  Panel principal", "◈  Explorar mercado", "▤  Noticias", "✦  Asistente IA", "⌘  Arquitectura"],
+        ["◫  Panel principal", "◈  Explorar mercado", "⌁  Análisis técnico", "▧  Cartera virtual", "▤  Noticias", "✦  Asistente IA", "◆  Planes Free / Pro", "⌘  Arquitectura"],
         label_visibility="collapsed",
     )
     st.markdown('<div class="sidebar-caption">CONFIGURACIÓN</div>', unsafe_allow_html=True)
@@ -139,7 +170,7 @@ with st.sidebar:
         f'<div class="sidebar-info"><div class="dot"></div><div><strong>{sidebar_mode}</strong>'
         f'<br><span>{sidebar_note}</span></div></div>', unsafe_allow_html=True
     )
-    st.markdown('<div class="sidebar-footer">v0.2 · Datos públicos y demo<br>Construido con Python + Streamlit</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-footer">v0.3 · Agente LangGraph integrado<br>Python · Streamlit · OpenAI</div>', unsafe_allow_html=True)
 
 
 st.markdown(
@@ -246,35 +277,133 @@ elif "Explorar mercado" in section:
     } for sym, c in COINS.items()])
     st.dataframe(df, hide_index=True, use_container_width=True)
 
+elif "Análisis técnico" in section:
+    heading("03 / INDICADORES", "Análisis técnico de mercado", "RSI, medias móviles y volatilidad calculados exclusivamente sobre datos externos observados.")
+    if not MARKET_LIVE:
+        st.warning("El proveedor de precios no responde: no calculamos indicadores usando datos ficticios.")
+    else:
+        sym = st.selectbox("Activo para análisis", list(COINS), index=list(COINS).index(selected), key="tech_symbol")
+        history = cached_history(sym, 90, MARKET_KEY)
+        if history is None or len(history) < 22:
+            st.warning("El histórico observado no tiene suficientes datos para calcular los indicadores.")
+        else:
+            history = history.sort_values("Fecha").copy()
+            p = pd.to_numeric(history["Precio"], errors="coerce").dropna()
+            ret = p.pct_change()
+            change = p.diff()
+            up = change.clip(lower=0).rolling(14).mean()
+            down = (-change.clip(upper=0)).rolling(14).mean()
+            rs = up / down.replace(0, float("nan"))
+            rsi = 100 - 100 / (1 + rs)
+            sma7 = p.rolling(7).mean()
+            sma21 = p.rolling(21).mean()
+            vol = ret.std() * (365 ** 0.5) * 100
+            a, b, c, d = st.columns(4)
+            a.metric("Precio observado", f"US$ {p.iloc[-1]:,.2f}")
+            b.metric("RSI (14)", f"{rsi.iloc[-1]:.1f}" if pd.notna(rsi.iloc[-1]) else "N/D")
+            c.metric("SMA (21)", f"US$ {sma21.iloc[-1]:,.2f}" if pd.notna(sma21.iloc[-1]) else "N/D")
+            d.metric("Volatilidad anualizada", f"{vol:.1f}%" if pd.notna(vol) else "N/D")
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=history["Fecha"], y=p, name="Precio", mode="lines", line={"color":"#2dd4bf","width":3}))
+            fig.add_trace(go.Scatter(x=history["Fecha"], y=sma7, name="SMA 7", line={"color":"#f59e0b","width":2}))
+            fig.add_trace(go.Scatter(x=history["Fecha"], y=sma21, name="SMA 21", line={"color":"#9b8afB","width":2}))
+            fig.update_layout(height=410, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                              font={"color":"#96A7BD"}, legend={"orientation":"h"}, yaxis={"tickprefix":"$"})
+            st.plotly_chart(fig, use_container_width=True)
+            st.caption("Cálculos educativos sobre observaciones CoinGecko; no son recomendaciones de inversión.")
+
+elif "Cartera virtual" in section:
+    heading("04 / SIMULACIÓN", "Cartera de inversión virtual", "Simulador con capital ficticio de US$ 10.000; no permite comprar criptomonedas reales.")
+    wallet = st.session_state.wallet
+    positions = wallet["positions"]
+    st.metric("Efectivo virtual", f"US$ {wallet['cash']:,.2f}")
+    if not MARKET_LIVE:
+        st.warning("Operaciones deshabilitadas porque no hay cotizaciones reales verificadas.")
+    else:
+        with st.form("trade_form", clear_on_submit=False):
+            t1, t2, t3 = st.columns(3)
+            action = t1.selectbox("Operación", ["Comprar", "Vender"])
+            coin = t2.selectbox("Activo", list(COINS), key="trade_coin")
+            amount = t3.number_input("Unidades", min_value=0.000001, value=0.01, step=0.01, format="%.6f")
+            done = st.form_submit_button("Ejecutar operación simulada")
+        if done:
+            price = float(COINS[coin]["price"])
+            cost = price * amount
+            existing = float(positions.get(coin, 0.0))
+            if action == "Comprar" and cost > wallet["cash"]:
+                st.error("Saldo virtual insuficiente.")
+            elif action == "Vender" and amount > existing:
+                st.error("No tienes suficientes unidades virtuales.")
+            else:
+                wallet["cash"] += -cost if action == "Comprar" else cost
+                positions[coin] = existing + amount if action == "Comprar" else existing - amount
+                wallet["trades"].append({"Operación": action, "Activo": coin, "Unidades": amount,
+                                         "Precio USD": price, "Total USD": cost})
+                st.success("Operación virtual registrada en esta sesión.")
+    if positions:
+        rows = [{"Activo": sym, "Unidades": round(qty, 6),
+                 "Valor USD": round(qty * COINS[sym]["price"], 2) if MARKET_LIVE else None}
+                for sym, qty in positions.items() if qty > 0]
+        if rows:
+            st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+    if wallet["trades"]:
+        st.subheader("Historial de simulación")
+        trades = pd.DataFrame(wallet["trades"])
+        st.dataframe(trades, hide_index=True, use_container_width=True)
+        st.download_button("Exportar operaciones CSV", data=trades.to_csv(index=False).encode(),
+                           file_name="cartera_virtual.csv", mime="text/csv")
+    st.caption("La cartera es temporal por sesión; todavía no se almacena en una cuenta persistente.")
+
 elif "Noticias" in section:
-    heading("03 / INTELIGENCIA", "Noticias y contexto", "Las siguientes tarjetas son ejemplos de diseño, no noticias verificadas.")
-    for item in DEMO_NEWS:
-        st.markdown(
-            f'<article class="news-card"><div class="news-meta"><span>{safe(item["tag"])} · EJEMPLO FICTICIO</span><span>{safe(item["time"])} (simulado)</span></div>'
-            f'<h3>{safe(item["title"])}</h3><p>{safe(item["description"])}</p></article>', unsafe_allow_html=True
-        )
-    st.info("Integración futura: API de noticias con una licencia compatible con su uso público o comercial.")
+    heading("05 / INFORMACIÓN", "Actualidad del mercado", "Titulares RSS de sus medios de origen, con atribución y enlace a la fuente.")
+    articles = public_headlines()
+    if not articles:
+        st.warning("No se pudieron verificar titulares actuales desde los proveedores. No se mostrarán noticias ficticias.")
+    else:
+        for item in articles:
+            st.markdown(f"**{safe(item['title'])}**")
+            st.caption(f"{item['source']} · {item['date']}")
+            st.link_button("Leer en la fuente", item["url"])
 
 elif "Asistente IA" in section:
-    heading("04 / LABORATORIO", "Conversa con CryptoAnalyst",
-            "Consultas por reglas con datos de CoinGecko; el agente IA con LangGraph todavía no está conectado." if MARKET_LIVE
-            else "Prototipo de chat por reglas. Aún no utiliza un modelo de IA ni LangGraph.")
-    st.markdown(
-        '<div class="chat-context">◈ ASISTENTE POR REGLAS · '
-        + ('COTIZACIONES COINGECKO' if MARKET_LIVE else 'RESPUESTAS SIMULADAS')
-        + ' · NO ES ASESORÍA FINANCIERA</div>', unsafe_allow_html=True
-    )
-    for msg in st.session_state.chat_history:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
-    if prompt := st.chat_input("Ejemplo: compara Bitcoin con Ethereum..."):
+    heading("06 / AGENTE INTELIGENTE", "CryptoAnalyst — agente ReAct", "OpenAI + LangGraph + herramientas de mercado, noticias y memoria por conversación.")
+    if ai_configured():
+        st.success("Motor OpenAI configurado. El agente invocará herramientas cuando sean necesarias.")
+    else:
+        st.warning("OPENAI_API_KEY todavía no está configurada en Streamlit Secrets. El agente real está integrado, pero no se ejecutan respuestas inventadas.")
+    for message in st.session_state.chat_history:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+    prompt = st.chat_input("Consulta: compara BTC y ETH con datos actuales...", disabled=not ai_configured())
+    if prompt:
         st.session_state.chat_history.append({"role": "user", "content": prompt})
-        response = answer_market(prompt, selected, COINS) if MARKET_LIVE else answer_demo(prompt, selected)
-        st.session_state.chat_history.append({"role": "assistant", "content": response})
+        with st.spinner("Consultando herramientas y modelo..."):
+            try:
+                response, used = ask_agent(prompt, st.session_state.agent_thread_id)
+                if used:
+                    response += "\n\n_Herramientas consultadas: " + ", ".join(used) + "_"
+            except Exception as exc:
+                response = "No se pudo completar la consulta del agente. Comprueba la clave OpenAI, créditos, proveedor y conectividad. (" + type(exc).__name__ + ")"
+        st.session_state.chat_history.append({"role": "assistant", "content": str(response)})
         st.rerun()
-    if st.button("Borrar conversación de demostración"):
+    if st.button("Nueva conversación"):
+        st.session_state.agent_thread_id = str(uuid4())
         st.session_state.chat_history = []
         st.rerun()
+    st.caption("Memoria durante la sesión activa. Se requiere una base de datos persistente para cuentas comerciales.")
+
+elif "Planes Free / Pro" in section:
+    heading("07 / PRODUCTO", "Planes de CryptoAnalyst", "Diseño freemium para la futura versión comercial. No se realizan cobros desde esta demostración pública.")
+    left, right = st.columns(2)
+    with left:
+        st.subheader("Free")
+        st.markdown("Panel de mercado, comparador, indicadores y cartera virtual de sesión.")
+        st.info("Acceso público al prototipo; sin pagos.")
+    with right:
+        st.subheader("Pro · Próximamente")
+        st.markdown("Agente ReAct, memoria persistente, cuentas individuales y mayores cuotas de consulta.")
+        st.info("Integración de pasarela y verificación de pagos preparada en el proyecto FastAPI, pero no desplegada en Streamlit Cloud.")
+    st.caption("Ninguna suscripción está activa. Los pagos reales requieren backend, credenciales mercantiles y webhooks verificados.")
 
 elif "Arquitectura" in section:
     heading("05 / INGENIERÍA", "Arquitectura del producto", "Arquitectura por etapas: mercado real, análisis y agente inteligente.")
@@ -282,13 +411,13 @@ elif "Arquitectura" in section:
 <div class="arch-row"><div class="arch-node">USUARIO <small>Streamlit · interfaz</small></div><div class="arch-arrow">→</div><div class="arch-node">AGENTE <small>Python · LangGraph</small></div><div class="arch-arrow">→</div><div class="arch-node">HERRAMIENTAS <small>APIs · análisis</small></div></div>
 ''', unsafe_allow_html=True)
     st.markdown("""
-**Estado actual:** la aplicación intenta consultar cotizaciones e históricos verificables de CoinGecko, usando caché y manejo de errores. Si el proveedor falla, se identifica explícitamente el modo demostración. Las noticias siguen siendo ejemplos; el chat usa reglas, NO un modelo de IA.
+**Estado actual:** mercado CoinGecko, indicadores, cartera simulada, noticias RSS y agente ReAct con tres herramientas. El agente solo se habilita con credenciales privadas configuradas; en su ausencia no hay respuestas generativas.
 
-**Siguiente etapa:** obtener cotizaciones verificables de FreeCryptoAPI; conectar noticias con condiciones de uso apropiadas; añadir un modelo de lenguaje y memoria de conversación mediante LangGraph.
+**Siguiente etapa:** activar las credenciales de OpenAI y proveedores de noticias con licencias adecuadas; habilitar backend persistente y cuentas verificadas.
 
 **Para producción:** autenticación de usuarios, registros de auditoría, caché de peticiones, manejo de errores y límites, pagos, protección de claves y verificación de licencias de los datos utilizados.
 """)
 
-footer_note = ("COTIZACIONES: COINGECKO CON CACHÉ · NOTICIAS DE EJEMPLO · CHAT POR REGLAS" if MARKET_LIVE
-               else "API NO DISPONIBLE · TODOS LOS PRECIOS, VARIACIONES Y NOTICIAS MOSTRADOS SON FICTICIOS")
+footer_note = ("COTIZACIONES: COINGECKO · AGENTE LANGGRAPH REQUIERE CLAVE OPENAI · MONETIZACIÓN PENDIENTE" if MARKET_LIVE
+               else "MERCADO NO DISPONIBLE · PRECIOS SIMULADOS IDENTIFICADOS COMO DEMO · MONETIZACIÓN PENDIENTE")
 st.markdown(f'<div class="disclaimer">CRYPTOANALYST AI · PROTOTIPO ACADÉMICO · {footer_note}. NO CONSTITUYE ASESORÍA FINANCIERA.</div>', unsafe_allow_html=True)
