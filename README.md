@@ -2,6 +2,20 @@
 
 URL de la aplicación: https://cryptoanalyst-ronaldo2026.streamlit.app/
 
+## Solución a `NotFoundError: removeChild` en Microsoft Edge
+
+La interfaz de Streamlit es una aplicación React. **La traducción automática del navegador puede alterar los nodos del DOM** y causar el error `NotFoundError: Failed to execute 'removeChild' on 'Node'`, especialmente cuando se cambia entre páginas. El proyecto ya está redactado en español; no necesita traducción. Al menos en Streamlit Community Cloud, el idioma `lang` del documento puede continuar marcado internamente como inglés.
+
+Si sucede:
+
+1. En Edge, haz clic en el icono de traducción de la barra de direcciones y elige **Mostrar original**.
+2. En las opciones de ese mismo icono, selecciona **Nunca traducir este sitio**.
+3. Actualiza la página usando **Ctrl + F5**.
+
+El código incluye `translate="no"` en los fragmentos HTML propios, lo que reduce la traducción de esos elementos, pero **no puede controlar los widgets internos de Streamlit ni la configuración de Edge**. Si el error persiste sin traducción, examinar extensiones que alteren la página y los registros del navegador.
+
+El panel del agente ya no incluye el mensaje antiguo de “chat por reglas” de versiones anteriores; el chat generativo solo está disponible después de configurar `OPENAI_API_KEY`.
+
 ## Acceso de usuarios
 
 La aplicación **no muestra el panel ni realiza consultas al mercado sin una sesión iniciada**. Incluye formulario de registro (nombre, email y contraseña), inicio de sesión y botón de cierre de sesión. Las contraseñas se verifican usando PBKDF2-HMAC-SHA256 y una sal aleatoria cuando se usa la base SQLite local; no se guardan en texto plano.
